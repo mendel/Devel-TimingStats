@@ -1,0 +1,4 @@
+# This file documents the revision history for Perl extension Devel::TimingStats.
+
+0.00001 - 2012-12-13 09:47:00
+  - Carved out code module from Catalyst::Stats
