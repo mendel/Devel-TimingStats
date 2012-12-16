@@ -15,15 +15,29 @@ has enable => (is => 'rw', required => 1, default => sub{ 1 });
 has tree => (
              is => 'ro',
              required => 1,
-             default => sub{ Tree::Simple->new({t => [gettimeofday]}) },
              handles => [qw/ accept traverse /],
+             lazy_build => 1,
             );
 has stack => (
               is => 'ro',
               required => 1,
-              lazy => 1,
-              default => sub { [ shift->tree ] }
+              lazy_build => 1,
              );
+
+sub _build_tree {
+    return Tree::Simple->new({t => [gettimeofday]});
+}
+
+sub _build_stack {
+    return [ shift->tree ];
+}
+
+sub reset {
+    my $self = shift;
+
+    $self->clear_tree;
+    $self->clear_stack;
+}
 
 sub profile {
     my $self = shift;
@@ -87,11 +101,11 @@ sub profile {
 }
 
 sub created {
-    return @{ shift->{tree}->getNodeValue->{t} };
+    return @{ shift->tree->getNodeValue->{t} };
 }
 
 sub elapsed {
-    return tv_interval(shift->{tree}->getNodeValue->{t});
+    return tv_interval(shift->tree->getNodeValue->{t});
 }
 
 sub report {
@@ -245,6 +259,12 @@ Constructor.
 Enable or disable stats collection.  By default, stats are enabled after object
 creation.
 
+=head2 reset
+
+    $stats->reset;
+
+Clears all stats and sets L</created> to the current time.
+
 =head2 profile
 
     $stats->profile($comment);
@@ -302,8 +322,8 @@ automatically assigned if not explicitly given.
 
     ($seconds, $microseconds) = $stats->created;
 
-Returns the time the object was created, in C<gettimeofday> format, with
-Unix epoch seconds followed by microseconds.
+Returns the time the object was created or L</reset> called, in C<gettimeofday>
+format, with Unix epoch seconds followed by microseconds.
 
 =head2 elapsed
 

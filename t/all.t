@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 13;
+use Test::More tests => 20;
 use Time::HiRes qw/gettimeofday/;
 use Tree::Simple;
 
@@ -96,12 +96,37 @@ BEGIN { use_ok("Devel::TimingStats") };
     is ($stats->elapsed, 14, "elapsed");
 }
 
+{
+    my $stats = Devel::TimingStats->new;
+
+    @fudge_t = (1, 0);
+    ok($stats->profile("comment1"), "profile");
+
+    isnt( scalar $stats->report, 0, "report is not empty before reset");
+
+    $fudge_t[0] = 10;
+    $stats->reset;
+
+    is_deeply( [ $stats->report ], [], "report is empty after reset");
+
+    $fudge_t[0] = 11;
+    ok($stats->profile("comment2"), "profile");
+
+    is_deeply( [ $stats->report ], [
+        [ 0, "- comment2", 1, 0 ],
+    ], "report works after reset");
+
+    $fudge_t[0] = 12;
+    is_deeply([ $stats->created ], [ 10, 0 ], "created is reset");
+    is($stats->elapsed, 2, "elapsed is reset");
+}
+
 # COMPATABILITY METHODS
 
 # accept
 {
     my $stats = Devel::TimingStats->new;
-    my $root = $stats->{tree};
+    my $root = $stats->tree;
     my $uid = $root->getUID;
 
     my $visitor = Tree::Simple::Visitor::FindByUID->new;
@@ -141,20 +166,20 @@ BEGIN { use_ok("Devel::TimingStats") };
 
     $stats->setNodeValue( $stat );
 
-    is_deeply( $stats->{tree}->getNodeValue, { action => 'test', elapsed => 10, comment => '' }   , '[COMPAT] setNodeValue(), data munged' );
+    is_deeply( $stats->tree->getNodeValue, { action => 'test', elapsed => 10, comment => '' }   , '[COMPAT] setNodeValue(), data munged' );
 }
 
 # getNodeValue
 {
     my $stats = Devel::TimingStats->new;
-    my $expected = $stats->{tree}->getNodeValue->{t};
+    my $expected = $stats->tree->getNodeValue->{t};
     is_deeply( $stats->getNodeValue, $expected, '[COMPAT] getNodeValue()' );
 }
 
 # traverse
 {
     my $stats = Devel::TimingStats->new;
-    $stats->{tree}->addChild( Tree::Simple->new( { foo => 'bar' } ) );
+    $stats->tree->addChild( Tree::Simple->new( { foo => 'bar' } ) );
     my @value;
     $stats->traverse( sub { push @value, shift->getNodeValue->{ foo }; } );
 
